@@ -180,7 +180,8 @@ bool AC101::begin(int sda, int scl, uint32_t frequency)
 	ok &= WriteReg(PLL_CTRL2, 0x8600);
 
 	// Clocking system
-	ok &= WriteReg(SYSCLK_CTRL, 0x8b08);
+	// ok &= WriteReg(SYSCLK_CTRL, 0x8b08);  // 1000 1011 0000 1000 PLL -> MCLK
+        ok &= WriteReg(SYSCLK_CTRL, 0xab08); // 1010 1011 0000 1000  PLL -> BCLK.
 	ok &= WriteReg(MOD_CLK_ENA, 0x800c);
 	ok &= WriteReg(MOD_RST_CTRL, 0x800c);
 
