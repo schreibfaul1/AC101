@@ -17,11 +17,15 @@
 
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+	Febr 2021 modified by schreibfaul1
 */
 
 #include "AC101.h"
 #include <Wire.h>
 #include <Arduino.h>
+
+#define BCLK        // clock over BCLK comment out: clock over MCLK
 
 #define AC101_ADDR			0x1A				// Device address
 
@@ -176,12 +180,26 @@ bool AC101::begin(int sda, int scl, uint32_t frequency)
 	ok &= WriteReg(SPKOUT_CTRL, 0xe880);
 
 	// Enable the PLL from 256*44.1KHz MCLK source
-	ok &= WriteReg(PLL_CTRL1, 0x014f);
-	ok &= WriteReg(PLL_CTRL2, 0x8600);
+	ok &= WriteReg(PLL_CTRL1, 0x0141);
+	uint16_t N = 48 << 4;                   /* 512 / (M * (2*K+1)) / (CHANNELS * WORD_SIZE) -> 512 / 3 * (2 * 16) */
+	uint16_t PLL_EN = 1 << 15;
+	uint16_t N_f = 0<<0;                    /* 0.2 N */
+	ok &= WriteReg(PLL_CTRL2, N | PLL_EN | N_f);
 
 	// Clocking system
-	// ok &= WriteReg(SYSCLK_CTRL, 0x8b08);  // 1000 1011 0000 1000 PLL -> MCLK
-        ok &= WriteReg(SYSCLK_CTRL, 0xab08); // 1010 1011 0000 1000  PLL -> BCLK.
+	uint16_t PLLCLK_ENA = 1<<15;            /* 0: Disable, 1: Enable */
+#ifdef BCLK
+	uint16_t PLL_CLK = 0x2 << 12;           /* bclk1 */
+	uint16_t I2S1CLK_SRC = 0x3<<8;          /* PLL */
+#else
+	uint16_t PLL_CLK = 0x0 << 12;           /* MCLK1 */
+	uint16_t I2S1CLK_SRC = 0x0<<8;          /* MLCK1 */
+#endif
+	uint16_t I2S1CLK_ENA = 1<<11;           /* 0: Disable, 1: Enable */
+
+	uint16_t SYSCLK_ENA = 1<<3;
+	ok &= WriteReg(SYSCLK_CTRL, PLLCLK_ENA|PLL_CLK| I2S1CLK_ENA|I2S1CLK_SRC|SYSCLK_ENA/*0x8b08*/);
+
 	ok &= WriteReg(MOD_CLK_ENA, 0x800c);
 	ok &= WriteReg(MOD_RST_CTRL, 0x800c);
 
