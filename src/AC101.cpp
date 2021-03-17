@@ -25,14 +25,16 @@
 
 	//one I2C bus: (default behaviour)
 	AC101 ac;
+	
 	ac.begin(sda, scl);
 
 	//two I2C busses:
 	TwoWire i2cBusOne = TwoWire(0);
 	TwoWire i2cBusTwo = TwoWire(1);
-    AC101 ac(i2cBusOne);
+        AC101 ac(i2cBusOne);
 
-    i2cBusOne.begin(sda, scl, 400000);
+	i2cBusOne.begin(sda, scl, 400000);
+	ac.begin();
 */
 
 #include "AC101.h"
