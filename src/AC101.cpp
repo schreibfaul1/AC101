@@ -18,12 +18,25 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	Febr 2021 modified by schreibfaul1
+	Febr  2021 modified by schreibfaul1  - set correct pll values
+	March 2021 modified by schreibfaul1  - can handle two i2c instances
+
+	examples:
+
+	//one I2C bus: (default behaviour)
+	AC101 ac;
+	ac.begin(sda, scl);
+
+	//two I2C busses:
+	TwoWire i2cBusOne = TwoWire(0);
+	TwoWire i2cBusTwo = TwoWire(1);
+    AC101 ac(i2cBusOne);
+
+    i2cBusOne.begin(sda, scl, 400000);
 */
 
 #include "AC101.h"
-#include <Wire.h>
-#include <Arduino.h>
+
 
 #define BCLK        // clock over BCLK comment out: clock over MCLK
 
@@ -141,37 +154,42 @@ const uint8_t regs[] = {
 
 bool AC101::WriteReg(uint8_t reg, uint16_t val)
 {
-	Wire.beginTransmission(AC101_ADDR);
-	Wire.write(reg);
-	Wire.write(uint8_t((val >> 8) & 0xff));
-	Wire.write(uint8_t(val & 0xff));
-	return 0 == Wire.endTransmission(true);
+	_TwoWireInstance.beginTransmission(AC101_ADDR);
+	_TwoWireInstance.write(reg);
+	_TwoWireInstance.write(uint8_t((val >> 8) & 0xff));
+	_TwoWireInstance.write(uint8_t(val & 0xff));
+	return 0 == _TwoWireInstance.endTransmission(true);
 }
 
 uint16_t AC101::ReadReg(uint8_t reg)
 {
-	Wire.beginTransmission(AC101_ADDR);
-	Wire.write(reg);
-	Wire.endTransmission(false);
+	_TwoWireInstance.beginTransmission(AC101_ADDR);
+	_TwoWireInstance.write(reg);
+	_TwoWireInstance.endTransmission(false);
 
 	uint16_t val = 0u;
-	if (2 == Wire.requestFrom(uint16_t(AC101_ADDR), uint8_t(2), true))
+	if (2 == _TwoWireInstance.requestFrom(uint16_t(AC101_ADDR), uint8_t(2), true))
 	{
-		val = uint16_t(Wire.read() << 8) + uint16_t(Wire.read());
+		val = uint16_t(_TwoWireInstance.read() << 8) + uint16_t(_TwoWireInstance.read());
 	}
-	Wire.endTransmission(false);
+	_TwoWireInstance.endTransmission(false);
 
 	return val;
 }
 
-AC101::AC101()
+AC101::AC101( TwoWire & TwoWireInstance ) : _TwoWireInstance(TwoWireInstance)
 {
 }
 
 bool AC101::begin(int sda, int scl, uint32_t frequency)
 {
-	bool ok = Wire.begin(sda, scl, frequency);
-
+    bool ok;
+    if((sda >= 0) && (scl >= 0)){
+	    ok = Wire.begin(sda, scl, frequency);
+    }
+    else {
+        ok = true;
+    }
 	// Reset all registers, readback default as sanity check
 	ok &= WriteReg(CHIP_AUDIO_RS, 0x123);
 	delay(100);
