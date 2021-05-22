@@ -20,25 +20,23 @@
 
 	Febr  2021 modified by schreibfaul1  - set correct pll values
 	March 2021 modified by schreibfaul1  - can handle two i2c instances
+    May   2021 modified by schreibfaul1  - constructor changed
 
 	examples:
 
 	//one I2C bus: (default behaviour)
 	AC101 ac;
-	
 	ac.begin(sda, scl);
 
 	//two I2C busses:
 	TwoWire i2cBusOne = TwoWire(0);
 	TwoWire i2cBusTwo = TwoWire(1);
-        AC101 ac(i2cBusOne);
+    AC101 ac(&i2cBusOne);
 
-	i2cBusOne.begin(sda, scl, 400000);
-	ac.begin();
+    i2cBusOne.begin(sda, scl, 400000);
 */
 
 #include "AC101.h"
-
 
 #define BCLK        // clock over BCLK comment out: clock over MCLK
 
@@ -153,38 +151,37 @@ const uint8_t regs[] = {
 	 AC_DAC_DAPOPT   	,
 	 DAC_DAP_ENA
 };
-
+//----------------------------------------------------------------------------------------------------------------------
 bool AC101::WriteReg(uint8_t reg, uint16_t val)
 {
-	_TwoWireInstance.beginTransmission(AC101_ADDR);
-	_TwoWireInstance.write(reg);
-	_TwoWireInstance.write(uint8_t((val >> 8) & 0xff));
-	_TwoWireInstance.write(uint8_t(val & 0xff));
-	return 0 == _TwoWireInstance.endTransmission(true);
+	_TwoWireInstance->beginTransmission(AC101_ADDR);
+	_TwoWireInstance->write(reg);
+	_TwoWireInstance->write(uint8_t((val >> 8) & 0xff));
+	_TwoWireInstance->write(uint8_t(val & 0xff));
+	return 0 == _TwoWireInstance->endTransmission(true);
 }
 
 uint16_t AC101::ReadReg(uint8_t reg)
 {
-	_TwoWireInstance.beginTransmission(AC101_ADDR);
-	_TwoWireInstance.write(reg);
-	_TwoWireInstance.endTransmission(false);
+	_TwoWireInstance->beginTransmission(AC101_ADDR);
+	_TwoWireInstance->write(reg);
+	_TwoWireInstance->endTransmission(false);
 
 	uint16_t val = 0u;
-	if (2 == _TwoWireInstance.requestFrom(uint16_t(AC101_ADDR), uint8_t(2), true))
+	if (2 == _TwoWireInstance->requestFrom(uint16_t(AC101_ADDR), uint8_t(2), true))
 	{
-		val = uint16_t(_TwoWireInstance.read() << 8) + uint16_t(_TwoWireInstance.read());
+		val = uint16_t(_TwoWireInstance->read() << 8) + uint16_t(_TwoWireInstance->read());
 	}
-	_TwoWireInstance.endTransmission(false);
+	_TwoWireInstance->endTransmission(false);
 
 	return val;
 }
-
-AC101::AC101( TwoWire & TwoWireInstance ) : _TwoWireInstance(TwoWireInstance)
-{
+//----------------------------------------------------------------------------------------------------------------------
+AC101::AC101( TwoWire *TwoWireInstance ){
+    _TwoWireInstance = TwoWireInstance;
 }
-
-bool AC101::begin(int sda, int scl, uint32_t frequency)
-{
+//----------------------------------------------------------------------------------------------------------------------
+bool AC101::begin(int sda, int scl, uint32_t frequency) {
     bool ok;
     if((sda >= 0) && (scl >= 0)){
 	    ok = Wire.begin(sda, scl, frequency);
@@ -250,120 +247,105 @@ bool AC101::begin(int sda, int scl, uint32_t frequency)
 
 	return ok;
 }
-
-void AC101::DumpRegisters()
-{
-	for (size_t i = 0; i < ARRAY_SIZE(regs); ++i)
-	{
+//----------------------------------------------------------------------------------------------------------------------
+void AC101::DumpRegisters() {
+	for (size_t i = 0; i < ARRAY_SIZE(regs); ++i){
 		Serial.print(regs[i], HEX);
 		Serial.print(" = ");
 		Serial.println(ReadReg(regs[i]), HEX);
 	}
 }
-
-uint8_t AC101::GetVolumeSpeaker()
-{
-	// Times 2, to scale to same range as headphone volume
-	return (ReadReg(SPKOUT_CTRL) & 31) * 2;
+//----------------------------------------------------------------------------------------------------------------------
+uint8_t AC101::GetVolumeSpeaker() {
+    // Times 2, to scale to same range as headphone volume
+    return (ReadReg(SPKOUT_CTRL) & 31) * 2;
 }
 
-bool AC101::SetVolumeSpeaker(uint8_t volume)
-{
-	// Divide by 2, as it is scaled to same range as headphone volume
-	volume /= 2;
-	if (volume > 31) volume = 31;
+bool AC101::SetVolumeSpeaker(uint8_t volume) {
+    // Divide by 2, as it is scaled to same range as headphone volume
+    volume /= 2;
+    if(volume > 31) volume = 31;
 
-	uint16_t val = ReadReg(SPKOUT_CTRL);
-	val &= ~31;
-	val |= volume;
-	return WriteReg(SPKOUT_CTRL, val);
+    uint16_t val = ReadReg(SPKOUT_CTRL);
+    val &= ~31;
+    val |= volume;
+    return WriteReg(SPKOUT_CTRL, val);
+}
+//----------------------------------------------------------------------------------------------------------------------
+uint8_t AC101::GetVolumeHeadphone() {
+    return (ReadReg(HPOUT_CTRL) >> 4) & 63;
 }
 
-uint8_t AC101::GetVolumeHeadphone()
-{
-	return (ReadReg(HPOUT_CTRL) >> 4) & 63;
+bool AC101::SetVolumeHeadphone(uint8_t volume) {
+    if(volume > 63) volume = 63;
+
+    uint16_t val = ReadReg(HPOUT_CTRL);
+    val &= ~63 << 4;
+    val |= volume << 4;
+    return WriteReg(HPOUT_CTRL, val);
 }
-
-bool AC101::SetVolumeHeadphone(uint8_t volume)
-{
-	if (volume > 63) volume = 63;
-
-	uint16_t val = ReadReg(HPOUT_CTRL);
-	val &= ~63 << 4;
-	val |= volume << 4;
-	return WriteReg(HPOUT_CTRL, val);
+//----------------------------------------------------------------------------------------------------------------------
+bool AC101::SetI2sSampleRate(I2sSampleRate_t rate) {
+    return WriteReg(I2S_SR_CTRL, rate);
 }
-
-bool AC101::SetI2sSampleRate(I2sSampleRate_t rate)
-{
-	return WriteReg(I2S_SR_CTRL, rate);
+//----------------------------------------------------------------------------------------------------------------------
+bool AC101::SetI2sMode(I2sMode_t mode) {
+    uint16_t val = ReadReg(I2S1LCK_CTRL);
+    val &= ~0x8000;
+    val |= uint16_t(mode) << 15;
+    return WriteReg(I2S1LCK_CTRL, val);
 }
-
-bool AC101::SetI2sMode(I2sMode_t mode)
-{
-	uint16_t val = ReadReg(I2S1LCK_CTRL);
-	val &= ~0x8000;
-	val |= uint16_t(mode) << 15;
-	return WriteReg(I2S1LCK_CTRL, val);
+//----------------------------------------------------------------------------------------------------------------------
+bool AC101::SetI2sWordSize(I2sWordSize_t size) {
+    uint16_t val = ReadReg(I2S1LCK_CTRL);
+    val &= ~0x0030;
+    val |= uint16_t(size) << 4;
+    return WriteReg(I2S1LCK_CTRL, val);
 }
-
-bool AC101::SetI2sWordSize(I2sWordSize_t size)
-{
-	uint16_t val = ReadReg(I2S1LCK_CTRL);
-	val &= ~0x0030;
-	val |= uint16_t(size) << 4;
-	return WriteReg(I2S1LCK_CTRL, val);
+//----------------------------------------------------------------------------------------------------------------------
+bool AC101::SetI2sFormat(I2sFormat_t format) {
+    uint16_t val = ReadReg(I2S1LCK_CTRL);
+    val &= ~0x000C;
+    val |= uint16_t(format) << 2;
+    return WriteReg(I2S1LCK_CTRL, val);
 }
-
-bool AC101::SetI2sFormat(I2sFormat_t format)
-{
-	uint16_t val = ReadReg(I2S1LCK_CTRL);
-	val &= ~0x000C;
-	val |= uint16_t(format) << 2;
-	return WriteReg(I2S1LCK_CTRL, val);
+//----------------------------------------------------------------------------------------------------------------------
+bool AC101::SetI2sClock(I2sBitClockDiv_t bitClockDiv, bool bitClockInv, I2sLrClockDiv_t lrClockDiv, bool lrClockInv) {
+    uint16_t val = ReadReg(I2S1LCK_CTRL);
+    val &= ~0x7FC0;
+    val |= uint16_t(bitClockInv ? 1 : 0) << 14;
+    val |= uint16_t(bitClockDiv) << 9;
+    val |= uint16_t(lrClockInv ? 1 : 0) << 13;
+    val |= uint16_t(lrClockDiv) << 6;
+    return WriteReg(I2S1LCK_CTRL, val);
 }
+//----------------------------------------------------------------------------------------------------------------------
+bool AC101::SetMode(Mode_t mode) {
+    bool ok = true;
+    if(MODE_LINE == mode) {
+        ok &= WriteReg(ADC_SRC, 0x0408);
+        ok &= WriteReg(ADC_DIG_CTRL, 0x8000);
+        ok &= WriteReg(ADC_APC_CTRL, 0x3bc0);
+    }
 
-bool AC101::SetI2sClock(I2sBitClockDiv_t bitClockDiv, bool bitClockInv, I2sLrClockDiv_t lrClockDiv, bool lrClockInv)
-{
-	uint16_t val = ReadReg(I2S1LCK_CTRL);
-	val &= ~0x7FC0;
-	val |= uint16_t(bitClockInv ? 1 : 0) << 14;
-	val |= uint16_t(bitClockDiv) << 9;
-	val |= uint16_t(lrClockInv ? 1 : 0) << 13;
-	val |= uint16_t(lrClockDiv) << 6;
-	return WriteReg(I2S1LCK_CTRL, val);
-}
+    if((MODE_ADC == mode) or (MODE_ADC_DAC == mode) or (MODE_LINE == mode)) {
+        ok &= WriteReg(MOD_CLK_ENA, 0x800c);
+        ok &= WriteReg(MOD_RST_CTRL, 0x800c);
+    }
 
-bool AC101::SetMode(Mode_t mode)
-{
-	bool ok = true;
-	if (MODE_LINE == mode)
-	{
-		ok &= WriteReg(ADC_SRC, 0x0408);
-		ok &= WriteReg(ADC_DIG_CTRL, 0x8000);
-		ok &= WriteReg(ADC_APC_CTRL, 0x3bc0);
-	}
+    if((MODE_DAC == mode) or (MODE_ADC_DAC == mode) or (MODE_LINE == mode)) {
+        // Enable Headphone output
+        ok &= WriteReg(OMIXER_DACA_CTRL, 0xff80);
+        ok &= WriteReg(HPOUT_CTRL, 0xc3c1);
+        ok &= WriteReg(HPOUT_CTRL, 0xcb00);
+        delay(100);
+        ok &= WriteReg(HPOUT_CTRL, 0xfbc0);
+        ok &= SetVolumeHeadphone(30);
 
-	if ((MODE_ADC == mode) or (MODE_ADC_DAC == mode) or (MODE_LINE == mode))
-	{
-		ok &= WriteReg(MOD_CLK_ENA,  0x800c);
-		ok &= WriteReg(MOD_RST_CTRL, 0x800c);
-	}
-
-	if ((MODE_DAC == mode) or (MODE_ADC_DAC == mode) or (MODE_LINE == mode))
-	{
-		// Enable Headphone output
-		ok &= WriteReg(OMIXER_DACA_CTRL, 0xff80);
-		ok &= WriteReg(HPOUT_CTRL, 0xc3c1);	
-		ok &= WriteReg(HPOUT_CTRL, 0xcb00);
-		delay(100);
-		ok &= WriteReg(HPOUT_CTRL, 0xfbc0);
-		ok &= SetVolumeHeadphone(30);
-
-		// Enable Speaker output
-		ok &= WriteReg(SPKOUT_CTRL, 0xeabd);
-		delay(10);
-		ok &= SetVolumeSpeaker(30);
-	}
-	return ok;
+        // Enable Speaker output
+        ok &= WriteReg(SPKOUT_CTRL, 0xeabd);
+        delay(10);
+        ok &= SetVolumeSpeaker(30);
+    }
+    return ok;
 }

@@ -96,7 +96,7 @@ public:
 	} Mode_t;
 
 	// Constructor.
-  	AC101(TwoWire & TwoWireInstance = Wire);
+  	AC101(TwoWire  *TwoWireInstance = &Wire);
 
 	// Initialize codec, using provided I2C pins and bus frequency.
 	// @return True on success, false on failure.
@@ -160,7 +160,7 @@ protected:
 	bool WriteReg(uint8_t reg, uint16_t val);
 	uint16_t ReadReg(uint8_t reg);
 private:
-	TwoWire & _TwoWireInstance;	// TwoWire Instance
+	TwoWire *_TwoWireInstance = NULL;	// TwoWire Instance
 };
 
 #endif
