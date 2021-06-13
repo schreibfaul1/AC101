@@ -325,7 +325,7 @@ bool AC101::SetMode(Mode_t mode) {
     if(MODE_LINE == mode) {
         ok &= WriteReg(ADC_SRC, 0x0408);
         ok &= WriteReg(ADC_DIG_CTRL, 0x8000);
-        ok &= WriteReg(ADC_APC_CTRL, 0x3bc0);
+        ok &= WriteReg(ADC_APC_CTRL, 0xbbc0);
     }
 
     if((MODE_ADC == mode) or (MODE_ADC_DAC == mode) or (MODE_LINE == mode)) {
