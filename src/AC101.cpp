@@ -233,7 +233,7 @@ bool AC101::begin(int sda, int scl, uint32_t frequency) {
 	ok &= WriteReg(I2S1_MXR_SRC, 0x2200);
 
 	ok &= WriteReg(ADC_SRCBST_CTRL, 0xccc4);
-	ok &= WriteReg(ADC_SRC, 0x2020);
+	ok &= WriteReg(ADC_SRC, 0x1040);
 	ok &= WriteReg(ADC_DIG_CTRL, 0x8000);
 	ok &= WriteReg(ADC_APC_CTRL, 0xbbc3);
 
