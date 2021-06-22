@@ -233,14 +233,14 @@ bool AC101::begin(int sda, int scl, uint32_t frequency) {
 	ok &= WriteReg(I2S1_MXR_SRC, 0x2200);
 
 	ok &= WriteReg(ADC_SRCBST_CTRL, 0xccc4);
-	ok &= WriteReg(ADC_SRC, 0x2020);
+	ok &= WriteReg(ADC_SRC, 0x1040);
 	ok &= WriteReg(ADC_DIG_CTRL, 0x8000);
 	ok &= WriteReg(ADC_APC_CTRL, 0xbbc3);
 
 	// Path Configuration
 	ok &= WriteReg(DAC_MXR_SRC, 0xcc00);
 	ok &= WriteReg(DAC_DIG_CTRL, 0x8000);
-	ok &= WriteReg(OMIXER_SR, 0x0081);
+	ok &= WriteReg(OMIXER_SR, 0x0102);
 	ok &= WriteReg(OMIXER_DACA_CTRL, 0xf080);
 
 	ok &= SetMode( MODE_DAC );
