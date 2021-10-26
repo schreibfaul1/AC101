@@ -18,9 +18,10 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	Febr  2021 modified by schreibfaul1  - set correct pll values
-	March 2021 modified by schreibfaul1  - can handle two i2c instances
+    Febr  2021 modified by schreibfaul1  - set correct pll values
+    March 2021 modified by schreibfaul1  - can handle two i2c instances
     May   2021 modified by schreibfaul1  - constructor changed
+    Oct   2021 modified by schreibfaul1  - I2C wrong ACK in ReadReg
 
 	examples:
 
@@ -168,12 +169,12 @@ uint16_t AC101::ReadReg(uint8_t reg)
 	_TwoWireInstance->endTransmission(false);
 
 	uint16_t val = 0u;
-	if (2 == _TwoWireInstance->requestFrom(uint16_t(AC101_ADDR), uint8_t(2), true))
+	if (2 == _TwoWireInstance->requestFrom(uint16_t(AC101_ADDR), uint8_t(2)))
 	{
 		val = uint16_t(_TwoWireInstance->read() << 8) + uint16_t(_TwoWireInstance->read());
 	}
-	_TwoWireInstance->endTransmission(false);
-
+	_TwoWireInstance->endTransmission(true);
+	log_i("reg %i, val %i", reg, val);
 	return val;
 }
 //----------------------------------------------------------------------------------------------------------------------
@@ -184,18 +185,18 @@ AC101::AC101( TwoWire *TwoWireInstance ){
 bool AC101::begin(int sda, int scl, uint32_t frequency) {
     bool ok;
     if((sda >= 0) && (scl >= 0)){
-	    ok = Wire.begin(sda, scl, frequency);
+	    ok = _TwoWireInstance->begin(sda, scl, frequency);
     }
     else {
         ok = true;
     }
+
 	// Reset all registers, readback default as sanity check
 	ok &= WriteReg(CHIP_AUDIO_RS, 0x123);
 	delay(100);
 	ok &= 0x0101 == ReadReg(CHIP_AUDIO_RS);
-
 	ok &= WriteReg(SPKOUT_CTRL, 0xe880);
-
+    log_i("hier4");
 	// Enable the PLL from 256*44.1KHz MCLK source
 	ok &= WriteReg(PLL_CTRL1, 0x0141);
 	uint16_t N = 48 << 4;                   /* 512 / (M * (2*K+1)) / (CHANNELS * WORD_SIZE) -> 512 / 3 * (2 * 16) */
@@ -233,14 +234,14 @@ bool AC101::begin(int sda, int scl, uint32_t frequency) {
 	ok &= WriteReg(I2S1_MXR_SRC, 0x2200);
 
 	ok &= WriteReg(ADC_SRCBST_CTRL, 0xccc4);
-	ok &= WriteReg(ADC_SRC, 0x1040);
+	ok &= WriteReg(ADC_SRC, 0x2020);
 	ok &= WriteReg(ADC_DIG_CTRL, 0x8000);
 	ok &= WriteReg(ADC_APC_CTRL, 0xbbc3);
 
 	// Path Configuration
 	ok &= WriteReg(DAC_MXR_SRC, 0xcc00);
 	ok &= WriteReg(DAC_DIG_CTRL, 0x8000);
-	ok &= WriteReg(OMIXER_SR, 0x0102);
+	ok &= WriteReg(OMIXER_SR, 0x0081);
 	ok &= WriteReg(OMIXER_DACA_CTRL, 0xf080);
 
 	ok &= SetMode( MODE_DAC );
@@ -325,7 +326,7 @@ bool AC101::SetMode(Mode_t mode) {
     if(MODE_LINE == mode) {
         ok &= WriteReg(ADC_SRC, 0x0408);
         ok &= WriteReg(ADC_DIG_CTRL, 0x8000);
-        ok &= WriteReg(ADC_APC_CTRL, 0xbbc0);
+        ok &= WriteReg(ADC_APC_CTRL, 0x3bc0);
     }
 
     if((MODE_ADC == mode) or (MODE_ADC_DAC == mode) or (MODE_LINE == mode)) {
