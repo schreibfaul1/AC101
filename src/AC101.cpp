@@ -174,7 +174,6 @@ uint16_t AC101::ReadReg(uint8_t reg)
 		val = uint16_t(_TwoWireInstance->read() << 8) + uint16_t(_TwoWireInstance->read());
 	}
 	_TwoWireInstance->endTransmission(true);
-	log_i("reg %i, val %i", reg, val);
 	return val;
 }
 //----------------------------------------------------------------------------------------------------------------------
