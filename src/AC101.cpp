@@ -196,7 +196,6 @@ bool AC101::begin(int sda, int scl, uint32_t frequency) {
 	delay(100);
 	ok &= 0x0101 == ReadReg(CHIP_AUDIO_RS);
 	ok &= WriteReg(SPKOUT_CTRL, 0xe880);
-    log_i("hier4");
 	// Enable the PLL from 256*44.1KHz MCLK source
 	ok &= WriteReg(PLL_CTRL1, 0x0141);
 	uint16_t N = 48 << 4;                   /* 512 / (M * (2*K+1)) / (CHANNELS * WORD_SIZE) -> 512 / 3 * (2 * 16) */
@@ -234,14 +233,14 @@ bool AC101::begin(int sda, int scl, uint32_t frequency) {
 	ok &= WriteReg(I2S1_MXR_SRC, 0x2200);
 
 	ok &= WriteReg(ADC_SRCBST_CTRL, 0xccc4);
-	ok &= WriteReg(ADC_SRC, 0x2020);
+	ok &= WriteReg(ADC_SRC, 0x1040);
 	ok &= WriteReg(ADC_DIG_CTRL, 0x8000);
 	ok &= WriteReg(ADC_APC_CTRL, 0xbbc3);
 
 	// Path Configuration
 	ok &= WriteReg(DAC_MXR_SRC, 0xcc00);
 	ok &= WriteReg(DAC_DIG_CTRL, 0x8000);
-	ok &= WriteReg(OMIXER_SR, 0x0081);
+	ok &= WriteReg(OMIXER_SR, 0x0102);
 	ok &= WriteReg(OMIXER_DACA_CTRL, 0xf080);
 
 	ok &= SetMode( MODE_DAC );
