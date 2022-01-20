@@ -22,6 +22,7 @@
     March 2021 modified by schreibfaul1  - can handle two i2c instances
     May   2021 modified by schreibfaul1  - constructor changed
     Oct   2021 modified by schreibfaul1  - I2C wrong ACK in ReadReg
+    Jan   2022 modified by schreibfaul1  - left right channel swapped
 
 	examples:
 
@@ -239,7 +240,7 @@ bool AC101::begin(int sda, int scl, uint32_t frequency) {
 	// Path Configuration
 	ok &= WriteReg(DAC_MXR_SRC, 0xcc00);
 	ok &= WriteReg(DAC_DIG_CTRL, 0x8000);
-	ok &= WriteReg(OMIXER_SR, 0x0102);
+	ok &= WriteReg(OMIXER_SR, 0x0081);
 	ok &= WriteReg(OMIXER_DACA_CTRL, 0xf080);
 
 	ok &= SetMode( MODE_DAC );
