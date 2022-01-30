@@ -23,6 +23,7 @@
     May   2021 modified by schreibfaul1  - constructor changed
     Oct   2021 modified by schreibfaul1  - I2C wrong ACK in ReadReg
     Jan   2022 modified by schreibfaul1  - left right channel swapped
+	Jan   2022 modified by schreibfaul1  - suppress compiler warning: left shift of negative value
 
 	examples:
 
@@ -280,7 +281,7 @@ bool AC101::SetVolumeHeadphone(uint8_t volume) {
     if(volume > 63) volume = 63;
 
     uint16_t val = ReadReg(HPOUT_CTRL);
-    val &= ~63 << 4;
+    val &= ~63U << 4;
     val |= volume << 4;
     return WriteReg(HPOUT_CTRL, val);
 }
